@@ -19,7 +19,7 @@ def find_bot():
         else:
             try:
                 print("Found bot on port %d" % port)
-                conn.connect(("localhost", port))
+                conn.connect(("127.0.0.1", port))
                 sconn = StealthConn(conn, client=True)
                 return sconn
             except socket.error:
@@ -58,7 +58,7 @@ def bot_server():
     # so if something else is using 1337, we'll keep going up.
     while True:
         try:
-            s.bind(("localhost", server_port))
+            s.bind(("127.0.0.1", server_port))
             print("Listening on port %d" % server_port)
             break
         except socket.error:

