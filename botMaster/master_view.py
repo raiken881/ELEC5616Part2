@@ -22,8 +22,8 @@ def decrypt_valuables(f):
     else:
         print ("Encryption was not correct")
     
-    decoded_text = str(message, 'ascii')
-    print(decoded_text)
+    # decoded_text = str(message, 'ascii')
+    print("secrets are {}".format(digest))
 
 
 if __name__ == "__main__":

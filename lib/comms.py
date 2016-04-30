@@ -61,15 +61,17 @@ class StealthConn(object):
             encrypted_data = encrypted_data + bytes(',', "ascii") + bytes(messageAuthCode, "ascii") + bytes('!', "ascii")
             self.counter += 1
 
-        if self.verbose:
-            print("Original data: {}".format(data))
-            print("Encrypted data: {}".format(repr(encrypted_data)))
-            print("Sending packet of length {}".format(len(encrypted_data)))
+            if self.verbose:
+                print("Original data: {}".format(data))
+                print("Encrypted data: {}".format(repr(encrypted_data)))
+                print("Sending packet of length {}".format(len(encrypted_data)))
+
         else:
             encrypted_data = data
 
         # Encode the data's length into an unsigned two byte int ('H')
         # Break down the message into n messages depending on the length of the message
+        # print("Encrypted data sent is {}".format(encrypted_data))
         pkt_len = struct.pack('H', len(encrypted_data))
         self.conn.sendall(pkt_len)
         self.conn.sendall(encrypted_data)
@@ -83,20 +85,26 @@ class StealthConn(object):
         encrypted_data = self.conn.recv(pkt_len)
 
         if self.keyExhangePerformed:
+            print("Received data is {}".format(encrypted_data))
+
             # Extract the message code and the encrypted data from the received data
             # Half of the shared secret is used for decryption and the other half for HMAC generation
+            # print("Received messsage is {}".format(encrypted_data))
             keyForDecryption = self.shared_hash[:int(len(self.shared_hash) / 2)]
             indexOfDelim = self.findDelimiter(encrypted_data, ',')
+            # print("Index of delimiter is {}".format(indexOfDelim))
             data = encrypted_data[0:indexOfDelim]
             indexOfMessageEnd = self.findDelimiter(encrypted_data, '!')
             keyForHMAC = self.shared_hash[int(len(self.shared_hash) / 2) + 1:]
             messageAuthCode = encrypted_data[indexOfDelim + 1: indexOfMessageEnd]
             receiverMessageCode = bytes(self.computeMAC(bytes(keyForHMAC, "ascii"), data),"ascii")
             data = self.decryptMessage(data, keyForDecryption)
+            print("Decrypted data is {}".format(data))
 
             # Extract the counter from the decrypted data
             indexOfDelim = self.findDelimiter(data, ',')
-            delimOfPad = self.findDelimiter(data, '!')
+            delimOfPad = self.findDelimiter(data, '|')
+            print("delim of pad is {}".format(delimOfPad))
             counter = int(data[indexOfDelim + 1:delimOfPad])
             data = data[:indexOfDelim]
 
@@ -149,9 +157,14 @@ class StealthConn(object):
         if len(key) > 32:
             key = key[0:32]
 
+        print("Message parsed is {}".format(message))
+        if not(isinstance(message,bytes)):
+            message = bytes(message,"ascii")
+
+
         initialvector = Random.new().read(AES.block_size)
         encryptionAES = AES.new(key, AES.MODE_CBC, initialvector)
-        messageToPad = message+ bytes(',',"ascii") + bytes(str(self.counter), "ascii")
+        messageToPad = message + bytes(',',"ascii") + bytes(str(self.counter), "ascii")
         encryptedMessage = initialvector + encryptionAES.encrypt(self.padMessageToBeEncrypted(messageToPad))
         return self.padInput(base64.b64encode(encryptedMessage))
 
@@ -217,11 +230,12 @@ class StealthConn(object):
         multipleOfCBC = 16
 
         missingBytes = len(message) % multipleOfCBC
+        padding = bytes('|',"ascii")
         if len(message) > multipleOfCBC:
             if missingBytes != 0:
 
                 for x in range(0, multipleOfCBC):
-                    message += bytes(str('!'), "ascii")
+                    message += padding
                     if len(message) % multipleOfCBC == 0:
                         break
 
@@ -229,6 +243,11 @@ class StealthConn(object):
             missingBytes = multipleOfCBC - missingBytes
 
             for x in range(0,missingBytes):
-                message += bytes(str('!'), "ascii")
+                message += padding
 
         return message
+
+
+
+
+
