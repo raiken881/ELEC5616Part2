@@ -39,9 +39,7 @@ def upload_valuables_to_pastebot(fn):
 ###
 
 def verify_file(f):
-    # Verify the file was sent by the bot master
-    # TODO: For Part 2, you'll use public key crypto here
-    # Naive verification by ensuring the first line has the "passkey"
+    # Verify the file sent by the master using pycrypto verifier
     signature,content = extract_signature_and_content(f)
     if signature is None:
         return False
