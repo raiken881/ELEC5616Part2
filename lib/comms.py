@@ -58,7 +58,7 @@ class StealthConn(object):
             encrypted_data = self.encryptUsingBlockCipher(data, bytes(keyForEncryption, "ascii"))
             keyForHMAC = self.shared_hash[int(len(self.shared_hash)/2) + 1 :]
             messageAuthCode = self.computeMAC(bytes(keyForHMAC, "ascii"), encrypted_data)
-            encrypted_data = encrypted_data + bytes(',', "ascii") + bytes(messageAuthCode, "ascii") + bytes('!', "ascii")
+            encrypted_data = encrypted_data + bytes(messageAuthCode, "ascii") + bytes(str(len(str(self.counter))), "ascii")
             self.counter += 1
 
             if self.verbose:
@@ -68,6 +68,7 @@ class StealthConn(object):
 
         else:
             encrypted_data = data
+
 
         # Encode the data's length into an unsigned two byte int ('H')
         # Break down the message into n messages depending on the length of the message
@@ -85,28 +86,25 @@ class StealthConn(object):
         encrypted_data = self.conn.recv(pkt_len)
 
         if self.keyExhangePerformed:
-            print("Received data is {}".format(encrypted_data))
 
             # Extract the message code and the encrypted data from the received data
             # Half of the shared secret is used for decryption and the other half for HMAC generation
             # print("Received messsage is {}".format(encrypted_data))
             keyForDecryption = self.shared_hash[:int(len(self.shared_hash) / 2)]
-            indexOfDelim = self.findDelimiter(encrypted_data, ',')
-            # print("Index of delimiter is {}".format(indexOfDelim))
-            data = encrypted_data[0:indexOfDelim]
-            indexOfMessageEnd = self.findDelimiter(encrypted_data, '!')
             keyForHMAC = self.shared_hash[int(len(self.shared_hash) / 2) + 1:]
-            messageAuthCode = encrypted_data[indexOfDelim + 1: indexOfMessageEnd]
-            receiverMessageCode = bytes(self.computeMAC(bytes(keyForHMAC, "ascii"), data),"ascii")
-            data = self.decryptMessage(data, keyForDecryption)
-            print("Decrypted data is {}".format(data))
+            data = encrypted_data[:-33]
+            message_auth_code = encrypted_data[len(data):len(encrypted_data) - 1]
+            counter_length = int(encrypted_data[-1:])
 
-            # Extract the counter from the decrypted data
-            indexOfDelim = self.findDelimiter(data, ',')
-            delimOfPad = self.findDelimiter(data, '|')
-            print("delim of pad is {}".format(delimOfPad))
-            counter = int(data[indexOfDelim + 1:delimOfPad])
-            data = data[:indexOfDelim]
+
+            receiverMessageCode = bytes(self.computeMAC(bytes(keyForHMAC, "ascii"), data), "ascii")
+            data = self.decryptMessage(data, keyForDecryption)
+
+            index_of_padding = self.get_index_of_padding(data,bytes('|',"ascii")[0])
+            start_index_of_counter = index_of_padding + counter_length
+
+            counter = int(data[-start_index_of_counter: len(data) - index_of_padding])
+            data = data[:len(data) - start_index_of_counter]
 
             # If we are in the server then check the client's counter sent against saved counter. If the counter is less
             # Then a replay attack is being performed and we just abort the current communication
@@ -127,7 +125,7 @@ class StealthConn(object):
                     self.conn.close()
 
             # If HMAC differs then stop
-            if not(self.compareMAC(messageAuthCode, receiverMessageCode)):
+            if not(self.compareMAC(message_auth_code, receiverMessageCode)):
                 print("MACs aren't similar. I'm going to kill the connection now... Bye!")
                 self.conn.close()
 
@@ -148,6 +146,14 @@ class StealthConn(object):
         MAC = HMAC.new(key,message,SHA256)
         return MAC.hexdigest()[:32]
 
+    def get_index_of_padding(self,message,padding_character):
+        number_of_pad = 0
+        for character_index in range(len(message) - 1, -1, -1):
+            if message[character_index] != padding_character:
+                return number_of_pad
+            number_of_pad += 1
+
+        return number_of_pad
     # If the key length is > 32 then get the first 32 bytes of the key(since the block cipher accept keys of only 32 bytes
     # long max). Create an initialisation vector which is a random byte string generated using pycrypto random function
     # Encrypt message with shared secret using block cipher in CFB mode and add the initialisation vector to it
@@ -157,14 +163,13 @@ class StealthConn(object):
         if len(key) > 32:
             key = key[0:32]
 
-        print("Message parsed is {}".format(message))
         if not(isinstance(message,bytes)):
             message = bytes(message,"ascii")
 
 
         initialvector = Random.new().read(AES.block_size)
         encryptionAES = AES.new(key, AES.MODE_CBC, initialvector)
-        messageToPad = message + bytes(',',"ascii") + bytes(str(self.counter), "ascii")
+        messageToPad = message + bytes(str(self.counter), "ascii")
         encryptedMessage = initialvector + encryptionAES.encrypt(self.padMessageToBeEncrypted(messageToPad))
         return self.padInput(base64.b64encode(encryptedMessage))
 

@@ -2,7 +2,7 @@ from Crypto.PublicKey import RSA
 from Crypto.Hash import SHA256
 from Crypto.Signature import PKCS1_PSS
 
-
+# This class makes use of the PKCS1_PSS signature as it
 class RSASignAndVerify(object):
 
     @staticmethod
