@@ -1,10 +1,7 @@
 import struct
 from Crypto import Random
 from Crypto.Random import random
-import hmac
-import hashlib
 import base64
-import datetime
 from Crypto.Cipher import AES
 from Crypto.Hash import HMAC
 from Crypto.Hash import SHA256

