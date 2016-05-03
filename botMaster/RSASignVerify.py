@@ -2,8 +2,7 @@ from Crypto.PublicKey import RSA
 from Crypto.Hash import SHA256
 from Crypto.Signature import PKCS1_PSS
 
-# This static class makes use of the PKCS1_PSS object to provide an easy and secure mechanism
-# to sign and verfiy signatures
+# This static class is used to sign and verify documents. A different public/private key pair is used for that purpose
 class RSASignAndVerify(object):
 
     @staticmethod

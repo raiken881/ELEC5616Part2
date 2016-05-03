@@ -2,13 +2,11 @@ import os
 from botMaster.RSASignVerify import RSASignAndVerify
 from botMaster.RSAEncrypterDecrypter import RSAEncrypterDecrypter
 
-
+# We are using an encrypt-then-sign mechanism where the file is encrypted then
+# the resultant is fed to the signature function
 def sign_file(f):
-    master_signature = RSASignAndVerify().sign_file(f)
-    ciphertext =  RSAEncrypterDecrypter().encrypt_using_bot_public(f)
-    print("The ciphertext is {}".format(ciphertext))
-    print("Length of object is {}".format(len(ciphertext)))
-    print("Length of signature is {}".format(len(master_signature)))
+    ciphertext = RSAEncrypterDecrypter().encrypt_using_bot_public(f)
+    master_signature = RSASignAndVerify().sign_file(ciphertext)
     return master_signature + ciphertext
 
 
@@ -20,7 +18,6 @@ if __name__ == "__main__":
             os.exit(1)
         f = open(os.path.join("../pastebot.net", fn), "rb").read()
         signed_f = sign_file(f)
-        print("The final signature is {}".format(signed_f))
         signed_fn = os.path.join("../pastebot.net", fn + ".signed")
         out = open(signed_fn, "wb")
         out.write(signed_f)
