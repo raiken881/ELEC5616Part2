@@ -48,7 +48,6 @@ def verify_file(f):
     signature = f[:size_of_message_or_signature]
     ciphertext = f[size_of_message_or_signature:]
     message = RSAEncrypterDecrypter().decrypt_using_bot_private(ciphertext)
-    print("Message received is {}".format(message))
 
     # Verify the signature from the received ciphertext and signature
     return RSASignAndVerify().verify_signature(ciphertext, signature)
